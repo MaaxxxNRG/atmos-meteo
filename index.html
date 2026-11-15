@@ -531,15 +531,22 @@ function anomColor(a, alpha=1){
 }
 const fmt1=v=>(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(1).replace('.',',');
 const hotSeason=m=>m>=4&&m<=8;
+// vocabulaire : « doux/frais » pour les petits écarts, « chaud/froid » dès que ça devient anormal
+function anomWord(n){
+  const hot=hotSeason(n.dd.date.getMonth()), aa=Math.abs(n.an);
+  if(n.an>=0) return aa>=5?'chaud':(hot?'chaud':'doux');
+  return aa>=5?'froid':(hot?'frais':'froid');
+}
 function normWords(n){
-  const m=n.dd.date.getMonth(), a=n.an, aa=Math.abs(a), w=a>0?(hotSeason(m)?'chaud':'doux'):(hotSeason(m)?'frais':'froid');
+  const a=n.an, aa=Math.abs(a), w=anomWord(n);
   const max=Math.max(...n.years.map(o=>o.v)), min=Math.min(...n.years.map(o=>o.v));
-  if(n.v>max) return `Record : jamais aussi ${w} depuis ${CLIM_START}`;
-  if(n.v<min) return `Record : jamais aussi ${w} depuis ${CLIM_START}`;
+  if(a>0 && n.v>max) return `Record : jamais aussi ${w} à cette date depuis ${CLIM_START}`;
+  if(a<0 && n.v<min) return `Record : jamais aussi ${w} à cette date depuis ${CLIM_START}`;
   if(aa<1.5) return 'Pile de saison';
-  if(aa<3.5) return `Un peu plus ${w} que la normale`;
-  if(aa<6) return `Nettement plus ${w} que la normale`;
-  return `Exceptionnellement ${w}`;
+  if(aa<3) return `Plus ${w} que la normale`;
+  if(aa<5) return `Nettement plus ${w} que la normale`;
+  if(aa<7) return `Anormalement ${w} pour la saison`;
+  return `Hors norme : ${aa.toFixed(0)}° ${a>0?'au-dessus':'en dessous'} de la normale`;
 }
 function dayLabel(dd, idx){ return idx===0?'aujourd’hui':idx===1?'demain':JOURS[dd.date.getDay()]; }
 
@@ -568,7 +575,7 @@ $('normChip').addEventListener('click',()=>{
   $('nTitle').textContent=`${dayLabel(dd,sl.day).replace(/^./,c=>c.toUpperCase())}, ${dname}`;
   const big=$('nBig'); big.textContent=fmt1(n.an)+'°'; big.style.color=anomColor(n.an);
   $('nWord').textContent=normWords(n);
-  const N=n.years.length, w=n.an>=0?(hotSeason(dd.date.getMonth())?'chaud':'doux'):(hotSeason(dd.date.getMonth())?'frais':'froid');
+  const N=n.years.length, w=anomWord(n);
   $('nRank').textContent = n.an>=0
     ? `Plus ${w} que ${n.below} des ${N} derniers ${dname}. Moyenne prévue ${n.v.toFixed(1).replace('.',',')}°, normale ${n.normal.toFixed(1).replace('.',',')}°.`
     : `Plus ${w} que ${n.above} des ${N} derniers ${dname}. Moyenne prévue ${n.v.toFixed(1).replace('.',',')}°, normale ${n.normal.toFixed(1).replace('.',',')}°.`;
