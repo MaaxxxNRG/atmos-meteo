@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Atmos">
+<meta name="atmos-version" content="2026-11-15c">
 <title>Atmos — météo</title>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -831,6 +832,24 @@ addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'||e.key==='ArrowUp') target=clamp((target??Math.round(pos))-1,0,NS-1);
   if(e.key==='Escape') closeSheet(); });
 resize(); setTimeout(()=>{$('hint').style.opacity=0},7000);
+
+// ================= Mise à jour auto (appli sur l'écran d'accueil) =================
+// L'iPhone garde l'ancienne page en cache : on compare la version en ligne et on recharge si elle a changé.
+const MY_VERSION=document.querySelector('meta[name="atmos-version"]').content;
+if(/[?&]u=/.test(location.search)) history.replaceState(null,'',location.pathname);
+async function checkUpdate(){
+  if(MOCK||location.protocol==='file:') return;
+  try{
+    const r=await fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
+    const m=(await r.text()).match(/name="atmos-version" content="([^"]+)"/);
+    if(m && m[1]!==MY_VERSION){
+      const k='atmos-reloaded-'+m[1]; if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,'1');
+      location.replace(location.pathname+'?u='+Date.now());
+    }
+  }catch(e){}
+}
+checkUpdate();
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(); });
 
 load(false);
 requestAnimationFrame(frame);
