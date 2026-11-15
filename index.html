@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Atmos">
-<meta name="atmos-version" content="2026-11-15c">
+<meta name="atmos-version" content="2026-11-15d">
 <title>Atmos — météo</title>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -71,6 +71,8 @@
   .sheet .panel{position:relative;margin:0 auto;width:min(560px,100%);max-height:88vh;overflow:auto;background:rgba(16,17,32,.92);border-radius:22px 22px 0 0;
     padding:16px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .42s cubic-bezier(.2,.9,.2,1);
     border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+  #sheet.typing{justify-content:flex-start}
+  #sheet.typing .panel{border-radius:0 0 22px 22px;padding-top:calc(14px + env(safe-area-inset-top));max-height:70vh}
   .sheet.open{pointer-events:auto} .sheet.open .veil{opacity:1} .sheet.open .panel{transform:none}
   /* Pastilles saison / pollen */
   #extras{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
@@ -111,7 +113,7 @@
   .city.sel{background:linear-gradient(90deg,rgba(255,255,255,.08),transparent);border-radius:10px}
   .city small{display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;opacity:.5;margin-top:3px}
   .crow{display:flex;align-items:stretch} .crow .city{flex:1;min-width:0}
-  .del{width:40px;border-top:1px solid rgba(255,255,255,.07);opacity:.45;font-size:16px} .del:active{opacity:1}
+  .star{width:44px;border-top:1px solid rgba(255,255,255,.07);font-size:18px;opacity:.4;transition:opacity .2s,transform .2s} .star.on{opacity:1;color:#f2c14e} .star:active{transform:scale(.85)}
   .search{display:flex;gap:8px;margin:0 2px 12px}
   .search input{flex:1;min-width:0;font:inherit;font-size:16px;color:#f6f1e8;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
     border-radius:12px;padding:11px 13px;outline:none;-webkit-user-select:text;user-select:text}
@@ -163,7 +165,7 @@
 <div class="hint" id="hint">↔ tourne le cadran pour avancer dans la semaine<br>touche le ciel pour t’abriter</div>
 <div id="status"><div class="pulse"></div><div id="statusTxt">Lecture du ciel…</div><button id="retry">Réessayer</button></div>
 <div class="credit">Données <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · temps réel</div>
-<div class="sheet" id="sheet"><div class="veil"></div><div class="panel"><div class="grab"></div><h3>Choisir une ville</h3><div class="search"><input id="q" type="search" placeholder="Une commune, un code postal…" autocomplete="off" enterkeyhint="search"><button id="geoBtn">◎ Ma position</button></div><div id="results"></div><div id="cities"></div></div></div>
+<div class="sheet" id="sheet"><div class="veil"></div><div class="panel"><div class="grab"></div><h3>Choisir une ville</h3><div class="search"><input id="q" type="search" placeholder="Commune ou code postal" autocomplete="off" enterkeyhint="search"><button id="geoBtn">◎ Ma position</button></div><div id="results"></div><div id="cities"></div></div></div>
 <div class="sheet" id="normSheet"><div class="veil"></div><div class="panel"><div class="grab"></div>
   <h3 id="nKicker">Normal pour la saison ?</h3><h4 id="nTitle"></h4>
   <div class="nHead"><div id="nBig"></div><div id="nVerdict"><b id="nWord"></b><span id="nRank"></span></div></div>
@@ -492,18 +494,27 @@ function cityBtn(c, extra=''){
   const d=DATA[c.id], t=d?.current?.temperature_2m;
   return `<button class="city${c.id===city.id?' sel':''}" data-id="${esc(c.id)}"><span>${esc(c.n)}${c.dep?`<small>${esc(c.dep)}</small>`:''}</span><em>${t!=null?Math.round(t)+'° · '+codeLabel(d.current.weather_code).toLowerCase():''}</em></button>${extra}`;
 }
+const isFav=c=>SAVED.some(s=>s.id===c.id);
+const starRow=c=>`<div class="crow">${cityBtn(c,`<button class="star${isFav(c)?' on':''}" data-star="${esc(c.id)}" aria-label="${isFav(c)?'Retirer des':'Ajouter aux'} favoris">${isFav(c)?'★':'☆'}</button>`)}</div>`;
 function renderCities(){
-  const mine=SAVED.map(c=>`<div class="crow">${cityBtn(c,`<button class="del" data-del="${esc(c.id)}" aria-label="Retirer ${esc(c.n)}">×</button>`)}</div>`).join('');
-  const others=CITIES.filter(c=>!SAVED.some(s=>s.id===c.id)).map(c=>cityBtn(c)).join('');
-  $('cities').innerHTML=(mine?`<h5>Mes villes</h5>${mine}`:'')+`<h5>Grandes villes</h5>${others}`;
+  const mine=SAVED.map(starRow).join('');
+  const others=CITIES.filter(c=>!isFav(c)).map(starRow).join('');
+  const cur=(!isFav(city)&&!CITIES.some(c=>c.id===city.id))?`<h5>Affichée en ce moment</h5>${starRow(city)}`:'';
+  $('cities').innerHTML=cur+(mine?`<h5>Mes villes</h5>${mine}`:'')+`<h5>Grandes villes</h5>${others}`;
 }
 const findCity=id=>listCities().find(x=>x.id===id)||SEARCH.find(x=>x.id===id);
 $('cities').addEventListener('click',e=>{
-  const del=e.target.closest('[data-del]');
-  if(del){ SAVED=SAVED.filter(c=>c.id!==del.dataset.del); store.set('atmos-saved',SAVED); renderCities(); return; }
+  const st=e.target.closest('[data-star]');
+  if(st){ toggleFav(findCity(st.dataset.star)); return; }
   const b=e.target.closest('.city'); if(!b) return; chooseCity(findCity(b.dataset.id));
 });
 
+function toggleFav(c){
+  if(!c) return;
+  if(isFav(c)) SAVED=SAVED.filter(x=>x.id!==c.id); else { SAVED.unshift(c); SAVED=SAVED.slice(0,12); }
+  store.set('atmos-saved',SAVED); renderCities();
+  if(SEARCH.length) $('results').innerHTML=`<h5>Résultats</h5>`+SEARCH.map(starRow).join('');
+}
 // ================= Recherche de communes =================
 let SEARCH=[], qTimer=null, qSeq=0;
 const MOCK_COMMUNES=[{nom:'Annecy',code:'74010',departement:{nom:'Haute-Savoie',code:'74'},centre:{coordinates:[6.1294,45.8992]},population:131000},
@@ -524,16 +535,20 @@ async function searchCommunes(q){
 $('q').addEventListener('input',()=>{
   clearTimeout(qTimer); const q=$('q').value.trim();
   if(q.length<2){ SEARCH=[]; $('results').innerHTML=''; $('cities').style.display=''; return; }
+  $('results').innerHTML='<p class="empty">Recherche…</p>'; $('cities').style.display='none';
   qTimer=setTimeout(async()=>{
     const seq=++qSeq;
     try{ const res=await searchCommunes(q); if(seq!==qSeq) return;
       SEARCH=res.map(o=>communeToCity(o));
-      $('results').innerHTML=SEARCH.length? `<h5>Résultats</h5>`+SEARCH.map(c=>cityBtn(c)).join('') : '<p class="empty">Aucune commune trouvée.</p>';
+      $('results').innerHTML=SEARCH.length? `<h5>Résultats</h5>`+SEARCH.map(starRow).join('') : '<p class="empty">Aucune commune trouvée.</p>';
       $('cities').style.display='none';
     }catch(e){ if(seq===qSeq) $('results').innerHTML='<p class="empty">Recherche indisponible pour le moment.</p>'; }
   },250);
 });
-$('results').addEventListener('click',e=>{ const b=e.target.closest('.city'); if(!b) return; chooseCity(findCity(b.dataset.id)); });
+$('results').addEventListener('click',e=>{ const st=e.target.closest('[data-star]'); if(st){ toggleFav(findCity(st.dataset.star)); return; }
+  const b=e.target.closest('.city'); if(!b) return; chooseCity(findCity(b.dataset.id)); });
+$('q').addEventListener('focus',()=>$('sheet').classList.add('typing'));
+$('q').addEventListener('blur',()=>{ if(!$('q').value.trim()) $('sheet').classList.remove('typing'); });
 $('q').addEventListener('keydown',e=>{ if(e.key==='Enter'&&SEARCH[0]) chooseCity(SEARCH[0]); });
 $('geoBtn').addEventListener('click',()=>{
   const btn=$('geoBtn'); if(!navigator.geolocation){ btn.textContent='Indisponible'; return; }
@@ -548,8 +563,7 @@ $('geoBtn').addEventListener('click',()=>{
 });
 async function chooseCity(c){
   if(!c) return;
-  if(!CITIES.some(x=>x.id===c.id) && !SAVED.some(x=>x.id===c.id)){ SAVED.unshift(c); SAVED=SAVED.slice(0,12); store.set('atmos-saved',SAVED); }
-  $('q').value=''; SEARCH=[]; $('results').innerHTML=''; $('cities').style.display='';
+  $('q').value=''; $('q').blur(); SEARCH=[]; $('results').innerHTML=''; $('cities').style.display=''; $('sheet').classList.remove('typing');
   closeSheet();
   if(DATA[c.id]){ applyCity(c,false); return; }
   $('status').classList.remove('hide'); document.querySelector('.pulse').style.display=''; $('statusTxt').textContent='Lecture du ciel…';
@@ -557,7 +571,7 @@ async function chooseCity(c){
   catch(e){ $('status').classList.add('hide'); }
 }
 function openSheet(id){ $(id||'sheet').classList.add('open'); }
-function closeSheet(){ document.querySelectorAll('.sheet.open').forEach(s=>s.classList.remove('open')); normAnim=null; }
+function closeSheet(){ document.querySelectorAll('.sheet.open').forEach(s=>s.classList.remove('open')); $('sheet').classList.remove('typing'); normAnim=null; }
 const anySheet=()=>!!document.querySelector('.sheet.open');
 $('cityBtn').addEventListener('click',()=>openSheet('sheet'));
 document.querySelectorAll('.sheet .veil').forEach(v=>v.addEventListener('click',closeSheet));
