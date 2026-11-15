@@ -64,12 +64,42 @@
   @media (max-height:740px){ #line{display:none} #temp{font-size:clamp(96px,28vw,300px)} }
   @media (max-height:640px){ #grid .cell:nth-child(n+5){display:none} }
   /* Sélecteur de villes */
-  #sheet{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none}
-  #sheet .veil{position:absolute;inset:0;background:rgba(5,6,14,.55);opacity:0;transition:opacity .3s;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-  #sheet .panel{position:relative;margin:0 auto;width:min(560px,100%);background:rgba(16,17,32,.92);border-radius:22px 22px 0 0;
+  .sheet{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none}
+  .sheet .veil{position:absolute;inset:0;background:rgba(5,6,14,.55);opacity:0;transition:opacity .3s;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+  .sheet .panel{position:relative;margin:0 auto;width:min(560px,100%);max-height:88vh;overflow:auto;background:rgba(16,17,32,.92);border-radius:22px 22px 0 0;
     padding:16px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .42s cubic-bezier(.2,.9,.2,1);
     border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-  #sheet.open{pointer-events:auto} #sheet.open .veil{opacity:1} #sheet.open .panel{transform:none}
+  .sheet.open{pointer-events:auto} .sheet.open .veil{opacity:1} .sheet.open .panel{transform:none}
+  /* Pastilles saison / pollen */
+  #extras{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+  .chip{pointer-events:auto;display:none;align-items:center;gap:7px;padding:5px 11px 5px 7px;border-radius:99px;font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;border:1px solid rgba(246,241,232,.3);background:rgba(10,10,22,.22);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    transition:transform .2s, background .3s}
+  .chip.show{display:inline-flex} .chip:active{transform:scale(.96)} .chip:focus{outline:none} .chip:focus-visible{outline:1px solid #f6f1e8}
+  .chip b{font-weight:600;letter-spacing:.04em}
+  .chip .dot{width:14px;height:14px;border-radius:50%;box-shadow:0 0 10px currentColor;background:currentColor}
+  .chip .stripes{display:flex;gap:1px;height:14px;align-items:stretch}
+  .chip .stripes i{width:2px;border-radius:1px}
+  /* Feuille saison */
+  .sheet h4{font-family:Fraunces,serif;font-style:italic;font-weight:400;font-size:clamp(22px,6vw,28px);font-variation-settings:"opsz" 72,"wght" 380,"SOFT" 100,"WONK" 1;margin:2px 4px 2px}
+  .nHead{display:flex;align-items:center;gap:16px;margin:8px 4px 14px}
+  #nBig{font-family:Fraunces,serif;font-size:clamp(58px,17vw,84px);line-height:.9;letter-spacing:-.04em;font-variation-settings:"opsz" 144,"wght" 700,"SOFT" 100;
+    text-shadow:0 0 34px currentColor}
+  #nVerdict b{display:block;font-family:Fraunces,serif;font-size:19px;font-weight:400;font-variation-settings:"opsz" 36,"wght" 520,"SOFT" 60;line-height:1.15}
+  #nVerdict span{display:block;font-size:10.5px;letter-spacing:.04em;opacity:.7;margin-top:6px;line-height:1.5}
+  .panel canvas#nCv{position:static;inset:auto;display:block;width:100%;height:270px}
+  .fine{font-size:8.5px;letter-spacing:.1em;opacity:.42;text-transform:uppercase;line-height:1.7;margin:10px 4px 0}
+  /* Feuille pollen */
+  .prow{padding:12px 4px;border-top:1px solid rgba(255,255,255,.07)}
+  .pname{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+  .pname span{font-family:Fraunces,serif;font-size:20px;font-variation-settings:"opsz" 48,"wght" 420,"SOFT" 50}
+  .pname em{font-style:normal;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  .pbars{display:flex;align-items:flex-end;gap:2px;height:42px}
+  .pbars i{flex:1;border-radius:2px 2px 1px 1px;transform-origin:bottom;animation:grow .7s cubic-bezier(.2,.9,.2,1) both}
+  .pbars i.cur{outline:1.5px solid #f6f1e8;outline-offset:1px}
+  .pdays{display:flex;margin-top:5px;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.5}
+  .pdays span{flex:1;text-align:center}
+  @keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
   .panel h3{font-size:10px;letter-spacing:.2em;text-transform:uppercase;opacity:.55;font-weight:400;margin:4px 4px 10px}
   .grab{width:38px;height:4px;border-radius:4px;background:rgba(255,255,255,.25);margin:0 auto 10px}
   .city{display:flex;justify-content:space-between;align-items:center;width:100%;padding:13px 8px;border-top:1px solid rgba(255,255,255,.07);text-align:left}
@@ -100,6 +130,10 @@
     <div id="day">…</div>
     <div id="temp">--<sup>°</sup></div>
     <div id="cond">—</div>
+    <div id="extras">
+      <button class="chip" id="normChip" aria-label="Comparer à la saison"><span class="stripes" id="normStripes"></span><span id="normTxt"></span></button>
+      <button class="chip" id="pollenChip" aria-label="Détail du pollen"><span class="dot" id="pollenDot"></span><span id="pollenTxt"></span></button>
+    </div>
     <div id="line"></div>
     <div id="grid">
       <div class="cell"><i>Ressenti</i><b id="g-feel">—</b></div>
@@ -117,7 +151,17 @@
 <div class="hint" id="hint">↔ tourne le cadran pour avancer dans la semaine<br>touche le ciel pour t’abriter</div>
 <div id="status"><div class="pulse"></div><div id="statusTxt">Lecture du ciel…</div><button id="retry">Réessayer</button></div>
 <div class="credit">Données <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · temps réel</div>
-<div id="sheet"><div class="veil"></div><div class="panel"><div class="grab"></div><h3>Choisir une ville</h3><div id="cities"></div></div></div>
+<div class="sheet" id="sheet"><div class="veil"></div><div class="panel"><div class="grab"></div><h3>Choisir une ville</h3><div id="cities"></div></div></div>
+<div class="sheet" id="normSheet"><div class="veil"></div><div class="panel"><div class="grab"></div>
+  <h3 id="nKicker">Normal pour la saison ?</h3><h4 id="nTitle"></h4>
+  <div class="nHead"><div id="nBig"></div><div id="nVerdict"><b id="nWord"></b><span id="nRank"></span></div></div>
+  <canvas id="nCv"></canvas>
+  <p class="fine">Comparé au même jour de 1991 à l’an dernier · normale = moyenne 1991–2020 (± 7 jours) · température moyenne de la journée · réanalyse ERA5 via Open-Meteo</p>
+</div></div>
+<div class="sheet" id="pollenSheet"><div class="veil"></div><div class="panel"><div class="grab"></div>
+  <h3>Pollen</h3><h4 id="pTitle"></h4><div id="pRows"></div>
+  <p class="fine">Seuils indicatifs en grains/m³ · prévisions CAMS (Europe) via Open-Meteo · le contour blanc marque le moment affiché</p>
+</div></div>
 
 <script>
 // ================= Villes =================
@@ -173,7 +217,7 @@ function processCity(raw){
   for(let d=0; d<nDays; d++){
     const date = new Date(h.time[d*24]+':00');
     const dayT = h.temperature_2m.slice(d*24,d*24+24);
-    days.push({date, lo:Math.min(...dayT), hi:Math.max(...dayT),
+    days.push({date, key:h.time[d*24].slice(0,10), lo:Math.min(...dayT), hi:Math.max(...dayT), mean:avg(dayT),
       rise:raw.daily?.sunrise?.[d]?.slice(11)||'', set:raw.daily?.sunset?.[d]?.slice(11)||''});
     for(let p=0;p<4;p++){
       const a=d*24+p*6, b=a+6, g=k=>h[k].slice(a,b).map(v=>v??0);
@@ -205,7 +249,7 @@ function mockCity(k){ // données simulées pour tests locaux uniquement
 }
 
 // ================= Phrases =================
-function phrase(s, partIdx, cityName){
+function phrase(s, partIdx, cityName, pol){
   const g=Math.round(s.gust), p=Math.round(s.prob), f=Math.round(s.feel), uv=Math.round(s.uv);
   const m = MOIS[new Date().getMonth()];
   if(isStorm(s.code)) return "Orage en vue. Ce n’est pas le moment de jouer dehors.";
@@ -216,6 +260,8 @@ function phrase(s, partIdx, cityName){
   if(p>=35) return `Risque d’averse à ${p} %. Parapluie dans le sac, au cas où.`;
   if(isFog(s.code)) return "Brouillard. La ville joue les mystérieuses.";
   if(g>=50) return `Ça souffle fort, jusqu’à ${g} km/h. Tiens bien ton écharpe.`;
+  if(pol && pol.lvl>=4) return `${pol.n} au taquet. Mouchoirs, lunettes, fenêtres fermées.`;
+  if(pol && pol.lvl>=3) return `${pol.n} en force. Si t’es allergique, prévois les mouchoirs.`;
   if(f<=0) return `Ressenti ${f}°. Gants, bonnet, pas de débat.`;
   if(f<=6) return "Ça pique. Le gros manteau sort du placard.";
   if(uv>=6) return `UV à ${uv}. Crème solaire, même si tu râles.`;
@@ -407,7 +453,8 @@ function updateUI(s){
     $('day').innerHTML = dayName + (sl.day>0?`<em>${PARTS[sl.part]}</em>`:'');
     $('cond').textContent = codeLabel(sl.code) + ` · ${Math.round(sl.tmin)}° → ${Math.round(sl.tmax)}°`;
     $('sun').textContent = dd.rise ? `☀ lever ${dd.rise.replace(':','h')} · coucher ${dd.set.replace(':','h')}` : '';
-    const L=$('line'); L.classList.add('out'); setTimeout(()=>{L.textContent=phrase(sl,sl.part,city.n); L.classList.remove('out')},170);
+    const pol=pollenTop(sl); updateChips(sl,pol);
+    const L=$('line'); L.classList.add('out'); setTimeout(()=>{L.textContent=phrase(sl,sl.part,city.n,pol); L.classList.remove('out')},170);
     try{ navigator.vibrate&&navigator.vibrate(5) }catch(e){} }
 }
 
@@ -420,17 +467,233 @@ function applyCity(c, keepPos){
   $('upd').textContent='màj '+d.fetched.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
   if(!keepPos){ pos=nowSlotIndex(); target=pos; vel=0; }
   try{ localStorage.setItem('atmos-city',c.id) }catch(e){}
-  renderCities();
+  renderCities(); loadExtras(c);
 }
 function renderCities(){
   $('cities').innerHTML = CITIES.map(c=>{ const d=DATA[c.id]; const t=d?.current?.temperature_2m;
     return `<button class="city${c.id===city.id?' sel':''}" data-id="${c.id}"><span>${c.n}</span><em>${t!=null?Math.round(t)+'° · '+codeLabel(d.current.weather_code).toLowerCase():''}</em></button>`; }).join('');
 }
 $('cities').addEventListener('click',e=>{ const b=e.target.closest('.city'); if(!b) return; const c=CITIES.find(x=>x.id===b.dataset.id); applyCity(c,false); closeSheet(); });
-function openSheet(){ $('sheet').classList.add('open'); }
-function closeSheet(){ $('sheet').classList.remove('open'); }
-$('cityBtn').addEventListener('click',openSheet);
-$('sheet').querySelector('.veil').addEventListener('click',closeSheet);
+function openSheet(id){ $(id||'sheet').classList.add('open'); }
+function closeSheet(){ document.querySelectorAll('.sheet.open').forEach(s=>s.classList.remove('open')); normAnim=null; }
+const anySheet=()=>!!document.querySelector('.sheet.open');
+$('cityBtn').addEventListener('click',()=>openSheet('sheet'));
+document.querySelectorAll('.sheet .veil').forEach(v=>v.addEventListener('click',closeSheet));
+
+// ================= Normal pour la saison ? =================
+const CLIM={}, POLLEN={};
+const CLIM_START=1991;
+async function loadExtras(c){
+  loadClim(c).catch(()=>{}); loadPollen(c).catch(()=>{});
+}
+async function loadClim(c){
+  if(CLIM[c.id]) return;
+  const lastY=new Date().getFullYear()-1, key='atmos-clim-'+c.id;
+  try{ const s=JSON.parse(localStorage.getItem(key)||'null'); if(s&&s.last===lastY){ CLIM[c.id]=s; refreshExtras(c); return; } }catch(e){}
+  let vals;
+  if(MOCK) vals=mockClim(CITIES.indexOf(c), lastY);
+  else {
+    const url='https://archive-api.open-meteo.com/v1/archive?latitude='+c.lat+'&longitude='+c.lon+'&start_date='+CLIM_START+'-01-01&end_date='+lastY
+      +'-12-31&daily=temperature_2m_mean&timezone=Europe%2FParis';
+    const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
+    vals=(await r.json()).daily.temperature_2m_mean.map(v=>v==null?null:Math.round(v*10)/10);
+  }
+  CLIM[c.id]={last:lastY, vals};
+  try{ localStorage.setItem(key, JSON.stringify(CLIM[c.id])) }catch(e){}
+  refreshExtras(c);
+}
+function refreshExtras(c){ if(c.id===city.id){ lastSlot=-1; if(normAnim) drawNorm(); } }
+
+// même date (année par année) + normale lissée sur ± 7 jours
+function climFor(cid, date){
+  const C=CLIM[cid]; if(!C) return null;
+  const t0=Date.UTC(CLIM_START,0,1), m=date.getMonth(), d=date.getDate(), at=(y,o)=>C.vals[Math.round((Date.UTC(y,m,d+o)-t0)/864e5)];
+  const years=[], ref=[];
+  for(let y=CLIM_START;y<=C.last;y++){
+    const v=at(y,0); if(v!=null) years.push({y,v});
+    if(y<=2020) for(let o=-7;o<=7;o++){ const w=at(y,o); if(w!=null) ref.push(w); }
+  }
+  if(years.length<10||!ref.length) return null;
+  return {years, normal:avg(ref)};
+}
+function normFor(dayIdx){
+  const dd=days&&days[dayIdx]; if(!dd) return null;
+  const cl=climFor(city.id, dd.date); if(!cl) return null;
+  const v=dd.mean, an=v-cl.normal, below=cl.years.filter(o=>o.v<v).length, above=cl.years.filter(o=>o.v>v).length;
+  return {...cl, v, an, below, above, dd, dayIdx};
+}
+
+// couleur divergente : froid bleu → crème → chaud corail
+function anomColor(a, alpha=1){
+  const t=clamp(a/6,-1,1), C=[64,128,206], M=[238,228,208], Hh=[232,104,74];
+  const [A,B,u]= t<0?[M,C,-t]:[M,Hh,t], c=k=>Math.round(lerp(A[k],B[k],u));
+  return `rgba(${c(0)},${c(1)},${c(2)},${alpha})`;
+}
+const fmt1=v=>(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(1).replace('.',',');
+const hotSeason=m=>m>=4&&m<=8;
+function normWords(n){
+  const m=n.dd.date.getMonth(), a=n.an, aa=Math.abs(a), w=a>0?(hotSeason(m)?'chaud':'doux'):(hotSeason(m)?'frais':'froid');
+  const max=Math.max(...n.years.map(o=>o.v)), min=Math.min(...n.years.map(o=>o.v));
+  if(n.v>max) return `Record : jamais aussi ${w} depuis ${CLIM_START}`;
+  if(n.v<min) return `Record : jamais aussi ${w} depuis ${CLIM_START}`;
+  if(aa<1.5) return 'Pile de saison';
+  if(aa<3.5) return `Un peu plus ${w} que la normale`;
+  if(aa<6) return `Nettement plus ${w} que la normale`;
+  return `Exceptionnellement ${w}`;
+}
+function dayLabel(dd, idx){ return idx===0?'aujourd’hui':idx===1?'demain':JOURS[dd.date.getDay()]; }
+
+function updateChips(sl, pol){
+  // pastille saison
+  const n=normFor(sl.day), chip=$('normChip');
+  if(n){
+    const last=n.years.slice(-11);
+    $('normStripes').innerHTML=last.map(o=>`<i style="background:${anomColor(o.v-n.normal)}"></i>`).join('')+`<i style="background:${anomColor(n.an)};width:3px;box-shadow:0 0 6px ${anomColor(n.an)}"></i>`;
+    $('normTxt').innerHTML=Math.abs(n.an)<1.5?'de saison':`<b>${fmt1(n.an)}°</b> vs saison`;
+    chip.classList.add('show');
+  } else chip.classList.remove('show');
+  // pastille pollen
+  const pc=$('pollenChip');
+  if(pol && pol.lvl>=2){
+    $('pollenDot').style.color=PCOL[pol.lvl]; $('pollenTxt').innerHTML=`Pollen · ${pol.n.toLowerCase()} <b>${PLVL[pol.lvl]}</b>`;
+    pc.classList.add('show');
+  } else pc.classList.remove('show');
+}
+
+let normAnim=null;
+$('normChip').addEventListener('click',()=>{
+  const sl=slots[clamp(Math.round(pos),0,NS-1)], n=normFor(sl.day); if(!n) return;
+  const dd=n.dd, dname=dd.date.getDate()+(dd.date.getDate()===1?'er':'')+' '+MOIS[dd.date.getMonth()];
+  $('nKicker').textContent='Normal pour la saison ? · '+city.n;
+  $('nTitle').textContent=`${dayLabel(dd,sl.day).replace(/^./,c=>c.toUpperCase())}, ${dname}`;
+  const big=$('nBig'); big.textContent=fmt1(n.an)+'°'; big.style.color=anomColor(n.an);
+  $('nWord').textContent=normWords(n);
+  const N=n.years.length, w=n.an>=0?(hotSeason(dd.date.getMonth())?'chaud':'doux'):(hotSeason(dd.date.getMonth())?'frais':'froid');
+  $('nRank').textContent = n.an>=0
+    ? `Plus ${w} que ${n.below} des ${N} derniers ${dname}. Moyenne prévue ${n.v.toFixed(1).replace('.',',')}°, normale ${n.normal.toFixed(1).replace('.',',')}°.`
+    : `Plus ${w} que ${n.above} des ${N} derniers ${dname}. Moyenne prévue ${n.v.toFixed(1).replace('.',',')}°, normale ${n.normal.toFixed(1).replace('.',',')}°.`;
+  normAnim={n, t0:performance.now(), dname, dlabel:dayLabel(dd,sl.day)};
+  openSheet('normSheet'); requestAnimationFrame(drawNorm);
+});
+
+function drawNorm(){
+  if(!normAnim) return;
+  const cvN=$('nCv'), c2=cvN.getContext('2d'), dpr=Math.min(devicePixelRatio||1,2), w=cvN.clientWidth, h=cvN.clientHeight;
+  if(cvN.width!==Math.round(w*dpr)){ cvN.width=Math.round(w*dpr); cvN.height=Math.round(h*dpr); }
+  c2.setTransform(dpr,0,0,dpr,0,0); c2.clearRect(0,0,w,h);
+  const {n,t0,dname,dlabel}=normAnim, el=(performance.now()-t0)/1000, ease=x=>1-Math.pow(1-clamp(x,0,1),3);
+  const yrs=n.years, N=yrs.length+1, thisY=n.dd.date.getFullYear();
+  const mono=(sz,wt=400)=>`${wt} ${sz}px "JetBrains Mono", monospace`;
+  // — Bandes : une par année —
+  c2.font=mono(9); c2.fillStyle='rgba(246,241,232,.55)'; c2.textAlign='left'; c2.textBaseline='alphabetic';
+  c2.fillText(`${yrs.length} ANS DE ${dname.toUpperCase()} À ${city.n.toUpperCase()}`,0,10);
+  const gap=w<420?1:1.5, bw=(w-gap*(N-1))/N, sTop=26, sH=92;
+  yrs.forEach((o,i)=>{ const p=ease((el-i/N*.7)/.45); if(p<=0) return; const hh=sH*p;
+    c2.fillStyle=anomColor(o.v-n.normal); c2.fillRect(i*(bw+gap), sTop+sH-hh, bw, hh); });
+  const pf=ease((el-.75)/.5);
+  if(pf>0){ const x=(N-1)*(bw+gap), col=anomColor(n.an), pulse=.6+.4*Math.sin(el*3);
+    c2.save(); c2.shadowColor=col; c2.shadowBlur=22*pulse; c2.fillStyle=col; c2.fillRect(x, sTop-10+(sH+18)*(1-pf), Math.max(bw,3), (sH+18)*pf); c2.restore();
+    c2.strokeStyle='rgba(246,241,232,.9)'; c2.lineWidth=1; c2.strokeRect(x-.5, sTop-10.5, Math.max(bw,3)+1, sH+19); }
+  c2.font=mono(9); c2.fillStyle='rgba(246,241,232,.5)'; c2.fillText(String(yrs[0].y),0,sTop+sH+22);
+  c2.textAlign='right'; c2.font=mono(9,600); c2.fillStyle='rgba(246,241,232,.95)'; c2.fillText(thisY+' · PRÉVU',w,sTop+sH+22);
+  c2.textAlign='center'; c2.font=mono(9); c2.fillStyle='rgba(246,241,232,.35)';
+  const mid=yrs.findIndex(o=>o.y===2008); if(mid>0) c2.fillText('2008',mid*(bw+gap)+bw/2,sTop+sH+22);
+
+  // — Règle : où se place ce jour —
+  const rTop=170, axisY=232, x0=8, x1=w-8;
+  c2.textAlign='left'; c2.font=mono(9); c2.fillStyle='rgba(246,241,232,.55)';
+  c2.fillText(`OÙ SE PLACE ${dlabel.toUpperCase()}`,0,rTop-14);
+  const all=yrs.map(o=>o.v).concat([n.v, n.normal]), lo=Math.floor(Math.min(...all)-1), hi=Math.ceil(Math.max(...all)+1), X=v=>lerp(x0,x1,(v-lo)/(hi-lo));
+  // bande de couleur sous l'axe
+  const gr=c2.createLinearGradient(x0,0,x1,0); for(let k=0;k<=10;k++){ const v=lo+(hi-lo)*k/10; gr.addColorStop(k/10, anomColor(v-n.normal,.85)); }
+  const pa=ease(el/.6); c2.fillStyle=gr; c2.beginPath(); c2.roundRect(x0,axisY,(x1-x0)*pa,4,2); c2.fill();
+  // graduations
+  c2.textAlign='center'; c2.font=mono(9); c2.fillStyle='rgba(246,241,232,.45)';
+  const stepT=(hi-lo)>14?4:2; for(let v=Math.ceil(lo/stepT)*stepT; v<=hi; v+=stepT){ c2.fillRect(X(v)-.5,axisY+6,1,4); c2.fillText(v+'°',X(v),axisY+21); }
+  // points des années (empilés)
+  const sorted=[...yrs].sort((a,b)=>a.v-b.v), placed=[];
+  sorted.forEach((o,k)=>{ const x=X(o.v); let lvl=0; while(placed.some(p=>p.l===lvl&&Math.abs(p.x-x)<7.5)) lvl++; placed.push({x,l:lvl});
+    const p=ease((el-.2-k/sorted.length*.6)/.4); if(p<=0) return; const y=axisY-8-lvl*7.5;
+    c2.beginPath(); c2.arc(x,y,3.2*p,0,7); c2.fillStyle=anomColor(o.v-n.normal); c2.fill(); });
+  // normale
+  const xn=X(n.normal); c2.setLineDash([2,3]); c2.strokeStyle='rgba(246,241,232,.55)'; c2.beginPath(); c2.moveTo(xn,rTop+2); c2.lineTo(xn,axisY+4); c2.stroke(); c2.setLineDash([]);
+  c2.font=mono(9); c2.fillStyle='rgba(246,241,232,.7)'; c2.fillText('normale',xn,axisY+34);
+  // jour prévu
+  const pj=ease((el-1)/.6);
+  if(pj>0){ const xf=lerp(xn,X(n.v),pj), col=anomColor(n.an), pulse=.5+.5*Math.sin(el*3);
+    c2.strokeStyle=col; c2.lineWidth=2; c2.beginPath(); c2.moveTo(xf,rTop+14); c2.lineTo(xf,axisY+2); c2.stroke();
+    c2.save(); c2.shadowColor=col; c2.shadowBlur=14+10*pulse; c2.beginPath(); c2.arc(xf,axisY+2,7,0,7); c2.fillStyle=col; c2.fill(); c2.restore();
+    c2.beginPath(); c2.arc(xf,axisY+2,7,0,7); c2.strokeStyle='#f6f1e8'; c2.lineWidth=1.5; c2.stroke();
+    const lbl=n.v.toFixed(1).replace('.',',')+'°'; c2.font='italic 600 17px Fraunces, serif'; const tw=c2.measureText(lbl).width+14;
+    const lx=clamp(xf,tw/2,w-tw/2); c2.fillStyle='rgba(12,12,24,.82)'; c2.beginPath(); c2.roundRect(lx-tw/2,rTop-6,tw,22,11); c2.fill();
+    c2.strokeStyle=col; c2.lineWidth=1; c2.stroke(); c2.fillStyle='#f6f1e8'; c2.textBaseline='middle'; c2.fillText(lbl,lx,rTop+5); c2.textBaseline='alphabetic'; }
+  // extrêmes
+  const cold=sorted[0], warm=sorted[sorted.length-1]; c2.font=mono(8.5); c2.fillStyle='rgba(246,241,232,.45)';
+  c2.textAlign='left'; c2.fillText(`${cold.y} · ${cold.v.toFixed(1).replace('.',',')}°`,0,axisY+48);
+  c2.textAlign='right'; c2.fillText(`${warm.y} · ${warm.v.toFixed(1).replace('.',',')}°`,w,axisY+48);
+  requestAnimationFrame(drawNorm);
+}
+
+// ================= Pollen =================
+const PTAX=[ // seuils indicatifs (grains/m³) : faible / moyen / élevé / très élevé
+  {k:'alder_pollen',   n:'Aulne',     th:[1,10,50,100]},
+  {k:'birch_pollen',   n:'Bouleau',   th:[1,10,50,100]},
+  {k:'grass_pollen',   n:'Graminées', th:[1,10,30,80]},
+  {k:'mugwort_pollen', n:'Armoise',   th:[1,5,15,40]},
+  {k:'olive_pollen',   n:'Olivier',   th:[1,10,50,100]},
+  {k:'ragweed_pollen', n:'Ambroisie', th:[1,3,10,30]}
+];
+const PLVL=['','faible','moyen','élevé','très élevé'], PCOL=['rgba(246,241,232,.12)','#9fd6a6','#f2c14e','#f08a4b','#e5484d'];
+const plevel=(t,v)=>{ let l=0; for(let i=0;i<4;i++) if(v>=t.th[i]) l=i+1; return l; };
+async function loadPollen(c){
+  const P=POLLEN[c.id]; if(P && Date.now()-P.at<60*60*1000) return;
+  let raw;
+  if(MOCK) raw=mockPollen(CITIES.indexOf(c));
+  else {
+    const url='https://air-quality-api.open-meteo.com/v1/air-quality?latitude='+c.lat+'&longitude='+c.lon+'&hourly='+PTAX.map(t=>t.k).join(',')+'&timezone=Europe%2FParis&forecast_days=5';
+    const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status); raw=(await r.json()).hourly;
+  }
+  const byKey={}; // 'AAAA-MM-JJ' -> 4 tranches -> {taxon: max}
+  for(let i=0;i<raw.time.length;i++){ const k=raw.time[i].slice(0,10), p=Math.floor(+raw.time[i].slice(11,13)/6);
+    (byKey[k] ||= [{},{},{},{}]); for(const t of PTAX){ const v=raw[t.k]?.[i]; if(v!=null) byKey[k][p][t.k]=Math.max(byKey[k][p][t.k]||0, v); } }
+  POLLEN[c.id]={at:Date.now(), byKey}; refreshExtras(c);
+}
+function pollenSlot(sl){ const P=POLLEN[city.id]; const dd=days&&days[sl.day]; return P&&dd&&P.byKey[dd.key]?P.byKey[dd.key][sl.part]:null; }
+function pollenTop(sl){
+  const ps=pollenSlot(sl); if(!ps) return null; let best=null;
+  for(const t of PTAX){ const v=ps[t.k]; if(v==null) continue; const l=plevel(t,v); if(!best||l>best.lvl||(l===best.lvl&&v>best.v)) best={n:t.n,lvl:l,v}; }
+  return best;
+}
+$('pollenChip').addEventListener('click',()=>{
+  const P=POLLEN[city.id]; if(!P) return; const cur=slots[clamp(Math.round(pos),0,NS-1)];
+  const ds=days.map((dd,i)=>({dd,i})).filter(o=>P.byKey[o.dd.key]);
+  $('pTitle').textContent=city.n+' · '+ds.length+' jours';
+  const rows=PTAX.map(t=>{ const vals=ds.flatMap(o=>P.byKey[o.dd.key].map((p,part)=>({v:p[t.k]||0, cur:o.i===cur.day&&part===cur.part})));
+    return {t, vals, max:Math.max(0,...vals.map(x=>x.v))}; }).filter(r=>plevel(r.t,r.max)>=1).sort((a,b)=>plevel(b.t,b.max)-plevel(a.t,a.max)||b.max-a.max);
+  $('pRows').innerHTML = rows.length? rows.map(r=>{ const L=plevel(r.t,r.max);
+    return `<div class="prow"><div class="pname"><span>${r.t.n}</span><em style="color:${PCOL[L]}">pic ${PLVL[L]}</em></div>
+      <div class="pbars">${r.vals.map((x,k)=>{ const l=plevel(r.t,x.v); return `<i class="${x.cur?'cur':''}" style="height:${l?18+l*20.5:6}%;background:${PCOL[l]};animation-delay:${k*18}ms"></i>`; }).join('')}</div>
+      <div class="pdays">${ds.map(o=>`<span>${o.i===0?'Auj.':JOURS_C[o.dd.date.getDay()]}</span>`).join('')}</div></div>`; }).join('')
+    : '<p class="fine">Rien dans l’air pour l’instant.</p>';
+  openSheet('pollenSheet');
+});
+
+function mockClim(k,lastY){ // tests locaux uniquement
+  const out=[], t0=Date.UTC(CLIM_START,0,1), n=Math.round((Date.UTC(lastY,11,31)-t0)/864e5)+1; let s=k*97+13;
+  const rnd=()=>{ s=(s*16807)%2147483647; return s/2147483647; };
+  for(let i=0;i<n;i++){ const d=new Date(t0+i*864e5), doy=(d-Date.UTC(d.getUTCFullYear(),0,1))/864e5, yr=d.getUTCFullYear()-CLIM_START;
+    out.push(Math.round((12.5+k*.4-7.5*Math.cos((doy-15)/365*6.283)+yr*.04+(rnd()+rnd()+rnd()-1.5)*4.2)*10)/10); }
+  return out;
+}
+function mockPollen(k){
+  const base=new Date(); base.setHours(0,0,0,0); const o={time:[]}; PTAX.forEach(t=>o[t.k]=[]);
+  for(let i=0;i<120;i++){ const dt=new Date(base.getTime()+i*36e5), hr=dt.getHours(), d=Math.floor(i/24);
+    o.time.push(dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0')+'T'+String(hr).padStart(2,'0')+':00');
+    const day=Math.max(0,Math.sin((hr-6)/24*6.28));
+    o.grass_pollen.push(day*(25+d*22)); o.birch_pollen.push(day*(8+d*3)); o.ragweed_pollen.push(d>2?day*4:0);
+    o.alder_pollen.push(0); o.mugwort_pollen.push(day*2); o.olive_pollen.push(0); }
+  return o;
+}
 
 async function load(keepPos){
   try{
@@ -466,7 +729,7 @@ function end(e){
     else { target=null; vel=clamp(vel,-1.2,1.2); if(Math.abs(vel)<.03) target=clamp(Math.round(pos),0,NS-1); } }
   ptr.on=false; mode=null; }
 cv.addEventListener('pointerup',end); cv.addEventListener('pointercancel',end);
-let wheelAcc=0; addEventListener('wheel',e=>{ if($('sheet').classList.contains('open')) return; wheelAcc+=e.deltaY+e.deltaX; if(Math.abs(wheelAcc)>30){ target=clamp((target??Math.round(pos))+Math.sign(wheelAcc),0,NS-1); wheelAcc=0; } },{passive:true});
+let wheelAcc=0; addEventListener('wheel',e=>{ if(anySheet()) return; wheelAcc+=e.deltaY+e.deltaX; if(Math.abs(wheelAcc)>30){ target=clamp((target??Math.round(pos))+Math.sign(wheelAcc),0,NS-1); wheelAcc=0; } },{passive:true});
 addEventListener('keydown',e=>{
   if(e.key==='ArrowRight'||e.key==='ArrowDown') target=clamp((target??Math.round(pos))+1,0,NS-1);
   if(e.key==='ArrowLeft'||e.key==='ArrowUp') target=clamp((target??Math.round(pos))-1,0,NS-1);
