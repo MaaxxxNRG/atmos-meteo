@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Atmos">
-<meta name="atmos-version" content="2026-11-15e">
+<meta name="atmos-version" content="2026-11-15f">
 <title>Atmos — météo</title>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -29,9 +29,10 @@
   #cityBtn b{font-family:Fraunces,serif;font-size:22px;letter-spacing:0;text-transform:none;font-variation-settings:"opsz" 72,"wght" 500,"SOFT" 60;font-style:italic}
   #cityBtn b{max-width:56vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:.15em}
   #cityBtn .car{opacity:.6;transition:transform .3s}
-  .now{font-size:10px;letter-spacing:.14em;text-transform:uppercase;text-align:right;line-height:1.6}
-  .now span{display:inline-block;padding:3px 9px;border:1px solid rgba(246,241,232,.35);border-radius:99px;font-size:11px;letter-spacing:.08em;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-  .now small{display:block;opacity:.55;font-size:9px}
+  .now{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;line-height:1.6}
+  .now i{font-style:normal;margin-right:-.14em} /* l'espacement des lettres ajoute un blanc après la dernière : on le compense */
+  .now span{display:inline-block;padding:3px calc(9px - .08em) 3px 9px;border:1px solid rgba(246,241,232,.35);border-radius:99px;font-size:11px;letter-spacing:.08em;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .now small{display:block;opacity:.55;font-size:9px;margin-right:-.14em}
   /* Bande des tranches */
   #parts{position:relative;display:grid;grid-template-columns:repeat(4,1fr);margin-top:clamp(14px,2.6vh,26px);
     font-size:10px;letter-spacing:.16em;text-transform:uppercase;border-top:1px solid rgba(246,241,232,.18)}
@@ -142,7 +143,7 @@
 <div id="ui">
   <div class="top">
     <button id="cityBtn" aria-label="Changer de ville"><b id="cityName">Paris</b><span class="car">▾</span></button>
-    <div class="now">maintenant<br><span id="nowPill">—</span><small id="upd"></small></div>
+    <div class="now"><i>maintenant</i><span id="nowPill">—</span><small id="upd"></small></div>
   </div>
   <div id="parts"><div>Nuit</div><div>Matin</div><div>Après-midi</div><div>Soir</div><span id="bar"></span></div>
   <div class="hero">
