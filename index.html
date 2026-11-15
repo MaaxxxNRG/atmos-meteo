@@ -26,6 +26,7 @@
   .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
   #cityBtn{pointer-events:auto;display:flex;align-items:baseline;gap:8px;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
   #cityBtn b{font-family:Fraunces,serif;font-size:22px;letter-spacing:0;text-transform:none;font-variation-settings:"opsz" 72,"wght" 500,"SOFT" 60;font-style:italic}
+  #cityBtn b{max-width:56vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:.15em}
   #cityBtn .car{opacity:.6;transition:transform .3s}
   .now{font-size:10px;letter-spacing:.14em;text-transform:uppercase;text-align:right;line-height:1.6}
   .now span{display:inline-block;padding:3px 9px;border:1px solid rgba(246,241,232,.35);border-radius:99px;font-size:11px;letter-spacing:.08em;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
@@ -107,6 +108,16 @@
   .city em{font-style:normal;font-size:12px;opacity:.7;letter-spacing:.06em}
   .city.sel span{font-style:italic;font-variation-settings:"opsz" 48,"wght" 700,"SOFT" 100,"WONK" 1}
   .city.sel{background:linear-gradient(90deg,rgba(255,255,255,.08),transparent);border-radius:10px}
+  .city small{display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;opacity:.5;margin-top:3px}
+  .crow{display:flex;align-items:stretch} .crow .city{flex:1;min-width:0}
+  .del{width:40px;border-top:1px solid rgba(255,255,255,.07);opacity:.45;font-size:16px} .del:active{opacity:1}
+  .search{display:flex;gap:8px;margin:0 2px 12px}
+  .search input{flex:1;min-width:0;font:inherit;font-size:16px;color:#f6f1e8;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+    border-radius:12px;padding:11px 13px;outline:none;-webkit-user-select:text;user-select:text}
+  .search input:focus{border-color:rgba(246,241,232,.5)} .search input::placeholder{color:rgba(246,241,232,.4)}
+  .search button{flex:none;border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:0 12px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+  .panel h5{font-size:9px;letter-spacing:.2em;text-transform:uppercase;opacity:.45;font-weight:400;margin:14px 6px 4px}
+  .empty{font-size:10px;letter-spacing:.08em;opacity:.5;padding:12px 8px}
   .hint{position:fixed;left:50%;top:58%;z-index:1;transform:translateX(-50%);width:88%;text-align:center;font-size:9px;letter-spacing:.16em;
     text-transform:uppercase;opacity:.65;pointer-events:none;transition:opacity 1s;line-height:1.9}
   #status{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;pointer-events:none;transition:opacity .6s}
@@ -151,11 +162,12 @@
 <div class="hint" id="hint">↔ tourne le cadran pour avancer dans la semaine<br>touche le ciel pour t’abriter</div>
 <div id="status"><div class="pulse"></div><div id="statusTxt">Lecture du ciel…</div><button id="retry">Réessayer</button></div>
 <div class="credit">Données <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · temps réel</div>
-<div class="sheet" id="sheet"><div class="veil"></div><div class="panel"><div class="grab"></div><h3>Choisir une ville</h3><div id="cities"></div></div></div>
+<div class="sheet" id="sheet"><div class="veil"></div><div class="panel"><div class="grab"></div><h3>Choisir une ville</h3><div class="search"><input id="q" type="search" placeholder="Une commune, un code postal…" autocomplete="off" enterkeyhint="search"><button id="geoBtn">◎ Ma position</button></div><div id="results"></div><div id="cities"></div></div></div>
 <div class="sheet" id="normSheet"><div class="veil"></div><div class="panel"><div class="grab"></div>
   <h3 id="nKicker">Normal pour la saison ?</h3><h4 id="nTitle"></h4>
   <div class="nHead"><div id="nBig"></div><div id="nVerdict"><b id="nWord"></b><span id="nRank"></span></div></div>
   <canvas id="nCv"></canvas>
+  <p class="fine" id="nAlt" style="opacity:.7;display:none"></p>
   <p class="fine">Comparé au même jour de 1991 à l’an dernier · normale = moyenne 1991–2020 (± 7 jours) · température moyenne de la journée · réanalyse ERA5 via Open-Meteo</p>
 </div></div>
 <div class="sheet" id="pollenSheet"><div class="veil"></div><div class="panel"><div class="grab"></div>
@@ -197,12 +209,17 @@ const isStorm = c => c>=95;
 const HOURLY = 'temperature_2m,apparent_temperature,relative_humidity_2m,precipitation_probability,precipitation,cloud_cover,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,uv_index,weather_code';
 const MOCK = /[?&]mock/.test(location.search);
 let DATA = {}; // id -> processed
-let city = CITIES[0];
-try{ const s = localStorage.getItem('atmos-city'); const f = CITIES.find(c=>c.id===s); if(f) city=f; }catch(e){}
+const store={ get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
+let SAVED = store.get('atmos-saved',[]);           // communes ajoutées par la recherche
+let city = store.get('atmos-cur',null);
+if(!city||city.lat==null){ let old=null; try{ old=localStorage.getItem('atmos-city'); }catch(e){} city=CITIES.find(c=>c.id===old)||CITIES[0]; }
+function listCities(){ const out=[], seen=new Set(); for(const c of [city,...SAVED,...CITIES]) if(c&&!seen.has(c.id)){ seen.add(c.id); out.push(c); } return out; }
+function mockIdx(c){ let h=0; for(const ch of c.id) h=(h*31+ch.charCodeAt(0))%997; return h%8; }
 
-async function fetchAll(){
-  if(MOCK) return CITIES.map((c,k)=>mockCity(k));
-  const url = 'https://api.open-meteo.com/v1/forecast?latitude='+CITIES.map(c=>c.lat).join(',')+'&longitude='+CITIES.map(c=>c.lon).join(',')
+async function fetchAll(list){
+  if(MOCK) return list.map(c=>mockCity(mockIdx(c)));
+  const url = 'https://api.open-meteo.com/v1/forecast?latitude='+list.map(c=>c.lat).join(',')+'&longitude='+list.map(c=>c.lon).join(',')
     +'&hourly='+HOURLY+'&daily=sunrise,sunset&current=temperature_2m,weather_code&timezone=Europe%2FParis&forecast_days=7&wind_speed_unit=kmh';
   const r = await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
   const j = await r.json(); return Array.isArray(j)?j:[j];
@@ -231,7 +248,7 @@ function processCity(raw){
         code:Math.max(...codes) });
     }
   }
-  return {slots, days, current:raw.current, fetched:new Date()};
+  return {slots, days, current:raw.current, elev:raw.elevation, fetched:new Date()};
 }
 
 function mockCity(k){ // données simulées pour tests locaux uniquement
@@ -466,14 +483,78 @@ function applyCity(c, keepPos){
   const cur=d.current||{}; $('nowPill').textContent=(cur.temperature_2m!=null?cur.temperature_2m.toFixed(1).replace('.',',')+'° · ':'')+codeLabel(cur.weather_code).toLowerCase();
   $('upd').textContent='màj '+d.fetched.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
   if(!keepPos){ pos=nowSlotIndex(); target=pos; vel=0; }
-  try{ localStorage.setItem('atmos-city',c.id) }catch(e){}
+  store.set('atmos-cur',c);
   renderCities(); loadExtras(c);
 }
-function renderCities(){
-  $('cities').innerHTML = CITIES.map(c=>{ const d=DATA[c.id]; const t=d?.current?.temperature_2m;
-    return `<button class="city${c.id===city.id?' sel':''}" data-id="${c.id}"><span>${c.n}</span><em>${t!=null?Math.round(t)+'° · '+codeLabel(d.current.weather_code).toLowerCase():''}</em></button>`; }).join('');
+const esc=t=>String(t).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+function cityBtn(c, extra=''){
+  const d=DATA[c.id], t=d?.current?.temperature_2m;
+  return `<button class="city${c.id===city.id?' sel':''}" data-id="${esc(c.id)}"><span>${esc(c.n)}${c.dep?`<small>${esc(c.dep)}</small>`:''}</span><em>${t!=null?Math.round(t)+'° · '+codeLabel(d.current.weather_code).toLowerCase():''}</em></button>${extra}`;
 }
-$('cities').addEventListener('click',e=>{ const b=e.target.closest('.city'); if(!b) return; const c=CITIES.find(x=>x.id===b.dataset.id); applyCity(c,false); closeSheet(); });
+function renderCities(){
+  const mine=SAVED.map(c=>`<div class="crow">${cityBtn(c,`<button class="del" data-del="${esc(c.id)}" aria-label="Retirer ${esc(c.n)}">×</button>`)}</div>`).join('');
+  const others=CITIES.filter(c=>!SAVED.some(s=>s.id===c.id)).map(c=>cityBtn(c)).join('');
+  $('cities').innerHTML=(mine?`<h5>Mes villes</h5>${mine}`:'')+`<h5>Grandes villes</h5>${others}`;
+}
+const findCity=id=>listCities().find(x=>x.id===id)||SEARCH.find(x=>x.id===id);
+$('cities').addEventListener('click',e=>{
+  const del=e.target.closest('[data-del]');
+  if(del){ SAVED=SAVED.filter(c=>c.id!==del.dataset.del); store.set('atmos-saved',SAVED); renderCities(); return; }
+  const b=e.target.closest('.city'); if(!b) return; chooseCity(findCity(b.dataset.id));
+});
+
+// ================= Recherche de communes =================
+let SEARCH=[], qTimer=null, qSeq=0;
+const MOCK_COMMUNES=[{nom:'Annecy',code:'74010',departement:{nom:'Haute-Savoie',code:'74'},centre:{coordinates:[6.1294,45.8992]},population:131000},
+  {nom:'Anglet',code:'64024',departement:{nom:'Pyrénées-Atlantiques',code:'64'},centre:{coordinates:[-1.5056,43.4789]},population:40000},
+  {nom:'Chamonix-Mont-Blanc',code:'74056',departement:{nom:'Haute-Savoie',code:'74'},centre:{coordinates:[6.8694,45.9237]},population:8600}];
+function communeToCity(o, coords){
+  const [lon,lat]=coords||o.centre.coordinates;
+  return {id:'c'+o.code, n:o.nom, dep:o.departement?`${o.departement.nom} (${o.departement.code})`:'', lat:+lat.toFixed(4), lon:+lon.toFixed(4)};
+}
+async function searchCommunes(q){
+  const fields='&fields=nom,code,centre,departement,population&limit=8';
+  if(MOCK) return MOCK_COMMUNES.filter(o=>o.nom.toLowerCase().startsWith(q.toLowerCase().slice(0,2)));
+  const url=/^\d{5}$/.test(q) ? 'https://geo.api.gouv.fr/communes?codePostal='+q+fields
+    : 'https://geo.api.gouv.fr/communes?nom='+encodeURIComponent(q)+'&boost=population'+fields;
+  const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
+  return (await r.json()).filter(o=>o.centre);
+}
+$('q').addEventListener('input',()=>{
+  clearTimeout(qTimer); const q=$('q').value.trim();
+  if(q.length<2){ SEARCH=[]; $('results').innerHTML=''; $('cities').style.display=''; return; }
+  qTimer=setTimeout(async()=>{
+    const seq=++qSeq;
+    try{ const res=await searchCommunes(q); if(seq!==qSeq) return;
+      SEARCH=res.map(o=>communeToCity(o));
+      $('results').innerHTML=SEARCH.length? `<h5>Résultats</h5>`+SEARCH.map(c=>cityBtn(c)).join('') : '<p class="empty">Aucune commune trouvée.</p>';
+      $('cities').style.display='none';
+    }catch(e){ if(seq===qSeq) $('results').innerHTML='<p class="empty">Recherche indisponible pour le moment.</p>'; }
+  },250);
+});
+$('results').addEventListener('click',e=>{ const b=e.target.closest('.city'); if(!b) return; chooseCity(findCity(b.dataset.id)); });
+$('q').addEventListener('keydown',e=>{ if(e.key==='Enter'&&SEARCH[0]) chooseCity(SEARCH[0]); });
+$('geoBtn').addEventListener('click',()=>{
+  const btn=$('geoBtn'); if(!navigator.geolocation){ btn.textContent='Indisponible'; return; }
+  btn.textContent='…';
+  navigator.geolocation.getCurrentPosition(async p=>{
+    const lat=p.coords.latitude, lon=p.coords.longitude; let c;
+    try{ const r=await fetch('https://geo.api.gouv.fr/communes?lat='+lat+'&lon='+lon+'&fields=nom,code,departement');
+      const o=(await r.json())[0]; c=o?communeToCity(o,[lon,lat]):null; }catch(e){}
+    if(!c) c={id:'geo', n:'Ma position', dep:'', lat:+lat.toFixed(4), lon:+lon.toFixed(4)};
+    btn.textContent='◎ Ma position'; chooseCity(c);
+  },()=>{ btn.textContent='Refusé'; setTimeout(()=>btn.textContent='◎ Ma position',2000); },{timeout:10000,maximumAge:600000});
+});
+async function chooseCity(c){
+  if(!c) return;
+  if(!CITIES.some(x=>x.id===c.id) && !SAVED.some(x=>x.id===c.id)){ SAVED.unshift(c); SAVED=SAVED.slice(0,12); store.set('atmos-saved',SAVED); }
+  $('q').value=''; SEARCH=[]; $('results').innerHTML=''; $('cities').style.display='';
+  closeSheet();
+  if(DATA[c.id]){ applyCity(c,false); return; }
+  $('status').classList.remove('hide'); document.querySelector('.pulse').style.display=''; $('statusTxt').textContent='Lecture du ciel…';
+  try{ const [raw]=await fetchAll([c]); DATA[c.id]=processCity(raw); applyCity(c,false); $('status').classList.add('hide'); }
+  catch(e){ $('status').classList.add('hide'); }
+}
 function openSheet(id){ $(id||'sheet').classList.add('open'); }
 function closeSheet(){ document.querySelectorAll('.sheet.open').forEach(s=>s.classList.remove('open')); normAnim=null; }
 const anySheet=()=>!!document.querySelector('.sheet.open');
@@ -490,16 +571,19 @@ async function loadClim(c){
   if(CLIM[c.id]) return;
   const lastY=new Date().getFullYear()-1, key='atmos-clim-'+c.id;
   try{ const s=JSON.parse(localStorage.getItem(key)||'null'); if(s&&s.last===lastY){ CLIM[c.id]=s; refreshExtras(c); return; } }catch(e){}
-  let vals;
-  if(MOCK) vals=mockClim(CITIES.indexOf(c), lastY);
+  let vals, elev=null;
+  if(MOCK){ vals=mockClim(mockIdx(c), lastY); elev=c.id==='c74056'?1650:null; }
   else {
     const url='https://archive-api.open-meteo.com/v1/archive?latitude='+c.lat+'&longitude='+c.lon+'&start_date='+CLIM_START+'-01-01&end_date='+lastY
       +'-12-31&daily=temperature_2m_mean&timezone=Europe%2FParis';
     const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
-    vals=(await r.json()).daily.temperature_2m_mean.map(v=>v==null?null:Math.round(v*10)/10);
+    const j=await r.json(); elev=j.elevation??null;
+    vals=j.daily.temperature_2m_mean.map(v=>v==null?null:Math.round(v*10)/10);
   }
-  CLIM[c.id]={last:lastY, vals};
-  try{ localStorage.setItem(key, JSON.stringify(CLIM[c.id])) }catch(e){}
+  CLIM[c.id]={last:lastY, vals, elev};
+  const keys=store.get('atmos-clim-keys',[]).filter(k=>k!==key); keys.push(key);
+  while(keys.length>10){ try{ localStorage.removeItem(keys.shift()); }catch(e){} }
+  store.set('atmos-clim-keys',keys); store.set(key, CLIM[c.id]);
   refreshExtras(c);
 }
 function refreshExtras(c){ if(c.id===city.id){ lastSlot=-1; if(normAnim) drawNorm(); } }
@@ -579,6 +663,10 @@ $('normChip').addEventListener('click',()=>{
   $('nRank').textContent = n.an>=0
     ? `Plus ${w} que ${n.below} des ${N} derniers ${dname}. Moyenne prévue ${n.v.toFixed(1).replace('.',',')}°, normale ${n.normal.toFixed(1).replace('.',',')}°.`
     : `Plus ${w} que ${n.above} des ${N} derniers ${dname}. Moyenne prévue ${n.v.toFixed(1).replace('.',',')}°, normale ${n.normal.toFixed(1).replace('.',',')}°.`;
+  const ce=CLIM[city.id]?.elev, fe=DATA[city.id]?.elev, na=$('nAlt');
+  if(ce!=null && fe!=null && Math.abs(ce-fe)>=250){ na.style.display='';
+    na.textContent=`⚠ Relief : la commune est à ${Math.round(fe)} m, la zone de 25 km qui sert de référence à ${Math.round(ce)} m en moyenne. Le chiffre est indicatif.`; }
+  else na.style.display='none';
   normAnim={n, t0:performance.now(), dname, dlabel:dayLabel(dd,sl.day)};
   openSheet('normSheet'); requestAnimationFrame(drawNorm);
 });
@@ -655,7 +743,7 @@ const plevel=(t,v)=>{ let l=0; for(let i=0;i<4;i++) if(v>=t.th[i]) l=i+1; return
 async function loadPollen(c){
   const P=POLLEN[c.id]; if(P && Date.now()-P.at<60*60*1000) return;
   let raw;
-  if(MOCK) raw=mockPollen(CITIES.indexOf(c));
+  if(MOCK) raw=mockPollen(mockIdx(c));
   else {
     const url='https://air-quality-api.open-meteo.com/v1/air-quality?latitude='+c.lat+'&longitude='+c.lon+'&hourly='+PTAX.map(t=>t.k).join(',')+'&timezone=Europe%2FParis&forecast_days=5';
     const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status); raw=(await r.json()).hourly;
@@ -705,8 +793,8 @@ function mockPollen(k){
 async function load(keepPos){
   try{
     $('retry').style.display='none';
-    const arr=await fetchAll();
-    arr.forEach((raw,k)=>{ DATA[CITIES[k].id]=processCity(raw); });
+    const list=listCities(), arr=await fetchAll(list);
+    arr.forEach((raw,k)=>{ DATA[list[k].id]=processCity(raw); });
     applyCity(city, keepPos);
     $('status').classList.add('hide');
   }catch(e){
@@ -738,6 +826,7 @@ function end(e){
 cv.addEventListener('pointerup',end); cv.addEventListener('pointercancel',end);
 let wheelAcc=0; addEventListener('wheel',e=>{ if(anySheet()) return; wheelAcc+=e.deltaY+e.deltaX; if(Math.abs(wheelAcc)>30){ target=clamp((target??Math.round(pos))+Math.sign(wheelAcc),0,NS-1); wheelAcc=0; } },{passive:true});
 addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'){ if(e.key==='Escape') closeSheet(); return; }
   if(e.key==='ArrowRight'||e.key==='ArrowDown') target=clamp((target??Math.round(pos))+1,0,NS-1);
   if(e.key==='ArrowLeft'||e.key==='ArrowUp') target=clamp((target??Math.round(pos))-1,0,NS-1);
   if(e.key==='Escape') closeSheet(); });
