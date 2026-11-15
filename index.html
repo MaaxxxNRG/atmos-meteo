@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Atmos">
-<meta name="atmos-version" content="2026-11-15d">
+<meta name="atmos-version" content="2026-11-15e">
 <title>Atmos — météo</title>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -64,6 +64,11 @@
     #parts{max-width:560px}
   }
   @media (max-height:740px){ #line{display:none} #temp{font-size:clamp(96px,28vw,300px)} }
+  /* écrans courts (Safari avec sa barre, petits iPhone) : on compacte pour laisser la place au cadran */
+  #ui.compact #temp{font-size:clamp(76px,21vw,200px)} #ui.compact .hero{margin-top:6px}
+  #ui.compact #parts{margin-top:10px} #ui.compact #extras{margin-top:7px} #ui.compact #grid{margin-top:9px;gap:6px 8px}
+  #ui.compact .cell b{font-size:13px} #ui.compact #sun{margin-top:6px}
+  #ui.tight #sun{display:none} #ui.tight #grid .cell:nth-child(n+5){display:none} #ui.tight #cond{margin-top:4px}
   @media (max-height:640px){ #grid .cell:nth-child(n+5){display:none} }
   /* Sélecteur de villes */
   .sheet{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none}
@@ -121,7 +126,7 @@
   .search button{flex:none;border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:0 12px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
   .panel h5{font-size:9px;letter-spacing:.2em;text-transform:uppercase;opacity:.45;font-weight:400;margin:14px 6px 4px}
   .empty{font-size:10px;letter-spacing:.08em;opacity:.5;padding:12px 8px}
-  .hint{position:fixed;left:50%;top:58%;z-index:1;transform:translateX(-50%);width:88%;text-align:center;font-size:9px;letter-spacing:.16em;
+  .hint{position:fixed;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));z-index:1;transform:translateX(-50%);width:88%;text-align:center;font-size:9px;letter-spacing:.16em;
     text-transform:uppercase;opacity:.65;pointer-events:none;transition:opacity 1s;line-height:1.9}
   #status{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;pointer-events:none;transition:opacity .6s}
   #status.hide{opacity:0}
@@ -298,8 +303,23 @@ let W,H,DPR,R,CX,CY; const STEP=0.13; // radians par tranche
 function resize(){ DPR=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
   cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
   R=Math.min(Math.max(W*.84,300),W<600?640:Math.min(560,H*.62)); CX=W/2; CY=H+R*(W<600?.34:.6);
-  const hn=document.getElementById('hint'); if(hn) hn.style.top=Math.max(0,CY-R-150)+'px'; }
+  placeDial();
+}
 addEventListener('resize',resize);
+// Le cadran se place sous le texte : s'il manque de place, on compacte l'interface
+function placeDial(){
+  const ui=document.getElementById('ui'), sun=document.getElementById('sun'); if(!ui||!sun) return;
+  const CY0=H+R*(W<600?.34:.6);
+  ui.classList.remove('compact','tight');
+  if(W>=900){ CY=CY0; return; }
+  const BAND=72, MINVIS=175; // BAND : place pour la courbe des températures au-dessus du cadran
+  const need=()=>{ const g=document.getElementById('grid'), el=getComputedStyle(sun).display==='none'?g:sun; return el.getBoundingClientRect().bottom+BAND+R; };
+  let cy=need();
+  if(H-(cy-R)<MINVIS){ ui.classList.add('compact'); cy=need(); }
+  if(H-(cy-R)<MINVIS){ ui.classList.add('tight'); cy=need(); }
+  CY=Math.max(CY0, Math.min(cy, H+R-MINVIS*.8));
+}
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>resize());
 const lerp=(a,b,t)=>a+(b-a)*t, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
 let slots=null, days=null, NS=1;
@@ -487,7 +507,7 @@ function applyCity(c, keepPos){
   $('upd').textContent='màj '+d.fetched.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
   if(!keepPos){ pos=nowSlotIndex(); target=pos; vel=0; }
   store.set('atmos-cur',c);
-  renderCities(); loadExtras(c);
+  renderCities(); loadExtras(c); requestAnimationFrame(placeDial);
 }
 const esc=t=>String(t).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 function cityBtn(c, extra=''){
@@ -664,6 +684,7 @@ function updateChips(sl, pol){
     $('pollenDot').style.color=PCOL[pol.lvl]; $('pollenTxt').innerHTML=`Pollen · ${pol.n.toLowerCase()} <b>${PLVL[pol.lvl]}</b>`;
     pc.classList.add('show');
   } else pc.classList.remove('show');
+  requestAnimationFrame(placeDial);
 }
 
 let normAnim=null;
